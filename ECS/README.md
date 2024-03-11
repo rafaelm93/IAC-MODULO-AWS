@@ -1,61 +1,28 @@
-# This Module Terraform deploy an APP in AWS ECS Fargate:
+# Terraform module to deploy an APP into ECS Fargate cluster.
 
-### What will be created:
-* Create ECS Service Fargate
-* Create ECS Task Definition
-* Create Task
-* Create Application Load Balance
-* Create Target Group
+This module:
+* Create tasks.
+* Create service.
+* Zero downtime deploy.
+* Create monitoring using CloudWatch.
+* Receive an json with containers definitions.
 
-### Requisites for running this project:
-- Docker
-- Docker-compose
-- Make
-- AWS CLI version 2
 
-### How do you use:
-### Credential for AWS:
-Create `.env` file to AWS credentials with access key and secret key.
-```shell
-# AWS environment
-AWS_ACCESS_KEY_ID=your-access-key-here
-AWS_SECRET_ACCESS_KEY=your-secret-key-here
-```
+## Usage
 
-### 2.2: Configure your variables in `Makefile` file.
-- `AWS_ACCOUNT`=you_account-id
-- `APP_IMAGE`=application_name
-- `AWS_REGIO`=you_aws_region
-
-### Create `terrafile.tf` file with content and set your configurations. If you prefer, change the environment variable name.
 ```terraform
-provider "aws" {
-  region  = "us-east-2"
-  version = "= 3.0"
-}
-
-terraform {
-  backend "s3" {
-    bucket = "your-bucket-here"
-    key    = "path/keyname-terraform-.tfstate"
-    region = "us-east-2"
-  }
-} 
-
 module "app-deploy" {
-  source                 = "git@github.com:EzzioMoreira/modulo-awsecs-fargate.git?ref=v1.4"
+  source                 = "git@github.com:EzzioMoreira/terraform-module-fargate-deploy.git?ref=v0.1"
   containers_definitions = data.template_file.containers_definitions_json.rendered
-  environment            = "your-environment"
-  app_name               = "your-app-name"
-  app_count              = "2"
+  environment            = "development"
+  subdomain_name         = "app"
+  app_name               = "app"
+  hosted_zone_id         = "Z09847195EBZJRXWQDI"
   app_port               = "80"
-  fargate_version        = "1.4.0"
-  cloudwatch_group_name  = "your-app-name"
+  cloudwatch_group_name  = "development-app"
 }
 
-output "load_balancer_dns_name" {
-  value = "http://${module.app-deploy.loadbalance_dns_name}"
-}
+################   DATA   ################ 
 
 data "template_file" "containers_definitions_json" {
   template = file("./containers_definitions.json")
@@ -63,104 +30,112 @@ data "template_file" "containers_definitions_json" {
   vars = {
     APP_VERSION = var.APP_VERSION
     APP_IMAGE   = var.APP_IMAGE
-    AWS_ACCOUNT = var.AWS_ACCOUNT
+    ENVIRONMENT = "development"
+    AWS_REGION  = var.aws_region
   }
 }
 
+################   VARIABLES   ################ 
 variable "APP_VERSION" {
-  default   = "latest"
-  description = "Get the value of variable GIT_COMMIT in Makefile."
 }
 
 variable "APP_IMAGE" {
-  default   = "you-image-name"
-  description = "Get the value of variable APP_IMAGE in Makefile"
+  default = "app"
 }
 
-variable "AWS_ACCOUNT" {
-  default   = "your-account-id"
-  description = "Get the value of variable AWS_ACCOUNT in Makefile"
+variable "aws_region" {
+  default = "us-east-1"
 }
-
 ```
-### Container Definition:
-Create file named containers_definitions_json with the following content.
-- your ECR address:           "520044189785.dkr.ecr.us-east-2.amazonaws.com"
-- "name": call the variable:  "${APP_IMAGE}"
-- calls the variables:        "${APP_IMAGE}: ${APP_VERSION}"
+
+## Container Definition Sample
+
+Create a folder called `templates` and a file called `containers_definitions.json` with the content bellow:
+
 ```json
 [
   {
-    "cpu": 256,
-    "image": "${AWS_ACCOUNT}.dkr.ecr.us-east-2.amazonaws.com/${APP_IMAGE}:${APP_VERSION}",
-    "memory": 256,
-    "name": "${APP_IMAGE}",
+    "cpu": 1024,
+    "image": "670631891947.dkr.ecr.us-east-1.amazonaws.com/my_app:${APP_VERSION}",
+    "memory": 1024,
+    "name": "myawesomeapp",
     "networkMode": "awsvpc",
     "portMappings": [
       {
-        "containerPort": 80,
-        "hostPort": 80
+        "containerPort": 3000,
+        "hostPort": 3000
+      }
+    ],
+    "environment": [
+      {
+        "name": "AWESOME_ENV_VAR",
+        "value": "${AWESOME_ENV_VAR}"
       }
     ],
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-          "awslogs-group": "${APP_IMAGE}",
-          "awslogs-region": "us-east-2",
-          "awslogs-stream-prefix": "${APP_IMAGE}-${APP_VERSION}"
+        "awslogs-group": "awesomeapp-gp",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "myawesomeapp-${APP_VERSION}"
       }
     }
   }
 ]
 ```
 
-### Terraform inputs:
+* The `name` of one container created on `containers_definitions.json` should be the same as `app_name` passed to module.
+* You can configure almost everything as variable, and you probably should do this. 
+
+## Multiple Container Definition Sample
+
+```json
+[
+  {
+    "cpu": 1024,
+    "image": "670631891947.dkr.ecr.us-east-1.amazonaws.com/my_app:${APP_VERSION}",
+    "memory": 1024,
+    "name": "myawesomeapp",
+    "networkMode": "awsvpc",
+    "portMappings": [
+      {
+        "containerPort": 3000,
+        "hostPort": 3000
+      }
+    ]
+  },
+  {
+    "cpu": 1024,
+    "image": "670631891947.dkr.ecr.us-east-1.amazonaws.com/my_worker:${APP_VERSION}",
+    "memory": 1024,
+    "name": "myawesomeworker",
+    "networkMode": "awsvpc",
+    "portMappings": [
+      {
+        "containerPort": 3000,
+        "hostPort": 3000
+      }
+    ]
+  }
+]
+```
+
+## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|:----:|:-----:|:-----:|
-| aws\_region | The AWS region to create things in. | string | `"us-east-2"` | no |
-| fargate\_version | The fargate version used to deploy. inside ECS cluster. | string | `"1.3.0"` | no |
-| fargate\_cpu | The maximum of CPU that the task can use. | string | 1024 | no |
-| fargate\_memory | The maximum of memory that the task can use. | string | `"2048"` | no |
-| app\_name | Name of your application. | string | `"empty"` | yes |
-| app\_port | The port used for communication between the application load balancer and container. | number | `"80"` | no |
-| app\_count | Number of tasks to be deployed to the application. | number | `"1"` | no |
-| environment | The environment name to app. | string | `"development"` | no |
-| cloudwatch\_group_name | CloudWatch group name where to send the logs. | string | `"empty"`| yes | 
-| containers\_definitions | The json file with the container definition task. | file | `"containers_definitions.json"` | yes ||
+| app\_count | Number of tasks that will be deployed for this app. | string | `"1"` | no |
+| app\_name | How your app will be called. | string | n/a | yes |
+| app\_port | The PORT that will be used to communication between load balancer and container. | string | `"3000"` | no |
+| aws\_region | The AWS region to create things in. | string | `"us-east-1"` | no |
+| cloudwatch\_group\_name | CloudWatch group name where to send the logs. | string | `"sample-group-name"` | no |
+| containers\_definitions | A JSON with all container definitions that should be run on the task. For more http://bit.do/eKzfH | string | n/a | yes |
+| environment | The enviroment name where that app will be deployed. | string | `"development"` | no |
+| fargate\_cpu | The maximum of CPU that the task can use. | string | `"1024"` | no |
+| fargate\_memory | The maximum of memory that the task can use. | string | `"1024"` | no |
+| fargate\_version | The fargate version used to deploy inside ECS cluster. | string | `"1.3.0"` | no |
+| subdomain\_name | The subdomain that will be create for the app. | string | n/a | yes |
 
-### Terraform Output:
+# Wiki
 
-| Name | Description |
-|:------:|:-------------:|
-| load\_balancer\_dns\_name | Application load balancer DNS name.  ||
-
-### The visual representation:
-```shell
-# run the command for terraform shell
-make terraform-sh
-
-# and then install apk graphviz
-apk -U add graphviz
-
-# Command is used to generate a visual representation
-terraform graph | dot -Tsvg > graph.svg
-```
-### For help, run the following commands: `make help`:
-#### Print:
-
-```make
-make help:         ## Run make help.
-docker-run-local:  ## Run the container on the local machine.
-docker-stop-local: ## Destroy the container on the local machine.
-ecr-build:         ## ECR-step:1 Build your Docker image.
-ecr-login:         ## ECR-step:2 Retrieve an authentication token and authenticate your Docker client to your registry.
-ecr-tag:           ## ECR-step:3 Tag your image so you can push the image to this repository.
-ecr-push:          ## ECR-step:4 Push this image to your newly created AWS repository.
-terraform-fmt:     ## Command is used to rewrite Terraform configuration files to a canonical format and style.
-terraform-init:    ## Run terraform init to download all necessary plugins
-terraform-plan:    ## Exec a terraform plan and puts it on a file called plano
-terraform-apply:   ## Uses plano to apply the changes on AWS.
-terraform-destroy: ## Destroy all resources created by the terraform file in this repo.
-terraform-sh:      ## Exec Terraform CLI.
-```
+Want to know more? 
