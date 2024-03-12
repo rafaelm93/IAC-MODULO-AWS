@@ -33,7 +33,7 @@ resource "aws_security_group_rule" "allow_https" {
 
 resource "aws_alb" "main" {
   name            = "${var.app_name}-alb"
-  subnets         = ["subnet-0740cef1200d1f7cf", "subnet-01254b9b485108af5" ]
+  subnets         = ["subnet-0835d6d71c2d9bb93", "subnet-0a7f853fc32aa61f2", "subnet-07106bba5ca3e1159" ]
   security_groups = [aws_security_group.lb.id]
 }
 

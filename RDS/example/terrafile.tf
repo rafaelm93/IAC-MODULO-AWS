@@ -4,9 +4,9 @@ provider "aws" {
 
 module "rds_lab" {
   source                  = "../"
-  subnet_ids              = ["subnet-07507183da3304aa0", "subnet-00e177c15671ca2c9","subnet-05b0cd44f4e9bd7b0" ]
+  subnet_ids              = ["subnet-0ed52d8e2feb9be35", "subnet-061293834317a504d", "subnet-080554c2e67a8bc11" ]
   proj_name               = "lab"
-  vpc_id                  = "vpc-0fd6d5f242299b378"
+  vpc_id                  = "vpc-0fcbed91d9672dcd1"
   port                    = 5432
   storage                 = 20
   storage_type            = "gp2"
@@ -14,7 +14,7 @@ module "rds_lab" {
   engine_version          = "16.1"
   instance_type           = "db.m5d.large"
   db_name                 = "lab"
-  db_username             = "labsuperlab"
+  db_username             = "user0"
   identifier              = "database-lab"
   parameter_group_name    = "default.postgres16"
   snapshot                = true
@@ -22,7 +22,7 @@ module "rds_lab" {
   default_tags = {
     Name : "RDS_lab",
     Team : "IAC",
-    Application : "quiteria",
+    Application : "unleashe",
     Environment : "Production",
     Terraform : "Yes",
     Owner : "IAC"

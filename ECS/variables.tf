@@ -62,7 +62,7 @@ variable "default_tags" {
 
 variable "aws_vpc" {
   type = string
-  default     = "vpc-0df5db10916d3b38d"
+  default     = "vpc-0fcbed91d9672dcd1"
   description = "vpc"
 }
 

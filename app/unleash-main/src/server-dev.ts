@@ -10,9 +10,9 @@ process.nextTick(async () => {
                 db: process.env.DATABASE_URL
                     ? undefined
                     : {
-                          user: 'unleash_user',
-                          password: 'password',
-                          host: 'localhost',
+                          user: process.env.UNLEASH_USER,
+                          password: process.env.UNLEASH_PASSWORD,
+                          host: process.env.UNLEASH_HOST,
                           port: 5432,
                           database:
                               process.env.UNLEASH_DATABASE_NAME || 'unleash',

@@ -26,7 +26,7 @@ resource "aws_ecs_service" "main" {
 
   network_configuration {
     security_groups = [aws_security_group.ecs_tasks.id]
-    subnets         = ["subnet-0740cef1200d1f7cf", "subnet-01948ada8625bd52e", "subnet-01254b9b485108af5", "subnet-0f6224f43c8ac45a0"]
+    subnets         = ["subnet-080554c2e67a8bc11", "subnet-061293834317a504d", "subnet-0ed52d8e2feb9be35" ]
   }
 
 
